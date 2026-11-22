@@ -44,7 +44,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("com.googlecode.libphonenumber:libphonenumber:8.13.52")
-    implementation("org.apache.poi:poi:5.2.5")
-    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("net.sourceforge.jexcelapi:jxl:2.6.12") {
+        exclude(group = "log4j", module = "log4j")
+    }
     testImplementation("junit:junit:4.13.2")
 }
