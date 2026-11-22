@@ -1,6 +1,7 @@
 package com.sendermobile.domain
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import com.sendermobile.data.CountryNames
 import com.sendermobile.data.Customer
 
 data class PhoneClassification(
@@ -16,7 +17,7 @@ class PhoneClassifier {
     /**
      * Accepts international numbers (+...), and national numbers using the
      * supplied default region. Egyptian numbers are the default for this app.
-     * Kuwait (+965) and Saudi Arabia (+966) are detected from the number itself.
+     * Every region supported by libphonenumber receives its localized country name.
      */
     fun classify(raw: String, defaultRegion: String = "EG"): PhoneClassification? {
         val cleaned = raw.trim().replace(Regex("[\\s().-]"), "")
@@ -25,16 +26,10 @@ class PhoneClassifier {
             val parsed = phoneUtil.parse(cleaned, defaultRegion.uppercase())
             if (!phoneUtil.isPossibleNumber(parsed) || !phoneUtil.isValidNumber(parsed)) return null
             val region = phoneUtil.getRegionCodeForNumber(parsed) ?: return null
-            val country = when (region) {
-                "EG" -> "مصر"
-                "KW" -> "الكويت"
-                "SA" -> "السعودية"
-                else -> region
-            }
             PhoneClassification(
                 normalizedNumber = phoneUtil.format(parsed, PhoneNumberUtil.PhoneNumberFormat.E164),
                 countryCode = "+${parsed.countryCode}",
-                countryName = country,
+                countryName = CountryNames.displayName(region),
                 isEgyptian = region == "EG"
             )
         } catch (_: Exception) {
