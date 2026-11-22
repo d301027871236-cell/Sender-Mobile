@@ -28,6 +28,13 @@ class CustomerSearchTest {
     }
 
     @Test
+    fun supportsInternationalAndMiddleDigitSearch() {
+        assertTrue(matchesPhonePrefix("01027616172", "+201027616172", "+20", "002010"))
+        assertTrue(matchesPhonePrefix("01027616172", "+201027616172", "+20", "2761"))
+        assertTrue(matchesPhonePrefix("+965 5001 2345", "+96550012345", "+965", "5001"))
+    }
+
+    @Test
     fun unrelatedPrefixDoesNotMatch() {
         assertFalse(matchesPhonePrefix("01027616172", "+201027616172", "+20", "011"))
     }
