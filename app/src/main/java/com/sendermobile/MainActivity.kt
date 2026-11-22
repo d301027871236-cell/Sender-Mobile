@@ -54,11 +54,26 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
-private fun phoneSearchDigits(value: String): String = buildString {
+internal fun phoneSearchDigits(value: String): String = buildString {
     value.forEach { character ->
         val digit = Character.digit(character, 10)
         if (digit >= 0) append(('0'.code + digit).toChar())
     }
+}
+
+internal fun matchesPhonePrefix(
+    originalPhone: String,
+    normalizedPhone: String,
+    countryCode: String,
+    queryDigits: String
+): Boolean {
+    if (queryDigits.isBlank()) return false
+    val originalDigits = phoneSearchDigits(originalPhone)
+    val normalizedDigits = phoneSearchDigits(normalizedPhone)
+    val callingCode = phoneSearchDigits(countryCode)
+    return originalDigits.startsWith(queryDigits) ||
+        normalizedDigits.startsWith(queryDigits) ||
+        normalizedDigits.removePrefix(callingCode).startsWith(queryDigits)
 }
 
 class MainActivity : ComponentActivity() {
@@ -156,11 +171,9 @@ private fun SenderMobileApp(
         val matchesName = query.isBlank() || customer.name.contains(query, ignoreCase = true)
         val originalDigits = phoneSearchDigits(customer.originalPhone)
         val normalizedDigits = phoneSearchDigits(customer.normalizedPhone)
-        val matchesPhone = isPhoneQuery && (
-            originalDigits.startsWith(queryDigits) ||
-                normalizedDigits.startsWith(queryDigits) ||
-                normalizedDigits.removePrefix(customer.countryCode.filter(Char::isDigit)).startsWith(queryDigits)
-            )
+        val matchesPhone = isPhoneQuery && matchesPhonePrefix(
+            customer.originalPhone, customer.normalizedPhone, customer.countryCode, queryDigits
+        )
         matchesCountry && (query.isBlank() || matchesName || matchesPhone)
     }
 
