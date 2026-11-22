@@ -68,16 +68,39 @@ internal fun matchesPhonePrefix(
     queryDigits: String
 ): Boolean {
     if (queryDigits.isBlank()) return false
+
     val originalDigits = phoneSearchDigits(originalPhone)
     val normalizedDigits = phoneSearchDigits(normalizedPhone)
     val callingCode = phoneSearchDigits(countryCode)
-    val nationalDigits = normalizedDigits.removePrefix(callingCode)
-    val nationalQuery = if (callingCode == "20" && queryDigits.startsWith("0")) {
-        queryDigits.drop(1)
-    } else queryDigits
-    return originalDigits.startsWith(queryDigits) ||
-        normalizedDigits.startsWith(queryDigits) ||
-        nationalDigits.startsWith(nationalQuery)
+
+    // Build equivalent forms so local, international, and 00-prefixed input
+    // can find the same saved contact.
+    val phoneForms = linkedSetOf(originalDigits, normalizedDigits)
+    if (callingCode.isNotBlank() && normalizedDigits.startsWith(callingCode)) {
+        val national = normalizedDigits.removePrefix(callingCode)
+        phoneForms += national
+        if (callingCode == "20") phoneForms += "0$national"
+    }
+
+    val queryForms = linkedSetOf(queryDigits)
+    if (queryDigits.startsWith("00") && queryDigits.length > 2) {
+        queryForms += queryDigits.drop(2)
+    }
+    if (callingCode == "20") {
+        if (queryDigits.startsWith("0") && queryDigits.length > 1) {
+            queryForms += queryDigits.drop(1)
+        } else if (queryDigits.startsWith("20") && queryDigits.length > 2) {
+            queryForms += queryDigits.drop(2)
+        }
+    }
+
+    // Prefix search works while typing; contains also supports searching
+    // by a middle section of a phone number (after at least 4 digits).
+    return phoneForms.any { phone ->
+        queryForms.any { q ->
+            phone.startsWith(q) || (q.length >= 4 && phone.contains(q))
+        }
+    }
 }
 
 class MainActivity : ComponentActivity() {
