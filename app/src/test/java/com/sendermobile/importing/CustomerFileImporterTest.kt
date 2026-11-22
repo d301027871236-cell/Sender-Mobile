@@ -52,10 +52,16 @@ class CustomerFileImporterTest {
     fun xlsxReadsSharedStringsAndSparseColumns() {
         val output = ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
+            zip.putNextEntry(ZipEntry("xl/workbook.xml"))
+            zip.write("""<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Contacts" sheetId="2" r:id="rId7"/></sheets></workbook>""".toByteArray(StandardCharsets.UTF_8))
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("xl/_rels/workbook.xml.rels"))
+            zip.write("""<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>""".toByteArray(StandardCharsets.UTF_8))
+            zip.closeEntry()
             zip.putNextEntry(ZipEntry("xl/sharedStrings.xml"))
             zip.write("""<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>الاسم</t></si><si><t>الهاتف</t></si><si><t>أحمد</t></si></sst>""".toByteArray(StandardCharsets.UTF_8))
             zip.closeEntry()
-            zip.putNextEntry(ZipEntry("xl/worksheets/sheet1.xml"))
+            zip.putNextEntry(ZipEntry("xl/worksheets/sheet2.xml"))
             zip.write("""<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="inlineStr"><is><t>01027616172</t></is></c></row></sheetData></worksheet>""".toByteArray(StandardCharsets.UTF_8))
             zip.closeEntry()
         }
