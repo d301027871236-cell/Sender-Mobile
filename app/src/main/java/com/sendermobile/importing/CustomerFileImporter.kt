@@ -248,7 +248,9 @@ object CustomerFileImporter {
         val lines = BufferedReader(InputStreamReader(input, StandardCharsets.UTF_8)).use { it.readLines() }
         val unfolded = mutableListOf<String>()
         lines.forEach { line ->
-            if ((line.startsWith(" ") || line.startsWith("\t")) && unfolded.isNotEmpty()) {
+            if (unfolded.isNotEmpty() && unfolded.last().endsWith("=")) {
+                unfolded[unfolded.lastIndex] = unfolded.last().dropLast(1) + line.trimStart()
+            } else if ((line.startsWith(" ") || line.startsWith("\t")) && unfolded.isNotEmpty()) {
                 unfolded[unfolded.lastIndex] = unfolded.last() + line.drop(1)
             } else unfolded += line
         }
@@ -278,10 +280,31 @@ object CustomerFileImporter {
         return ImportPreview(listOf("الاسم", "رقم الهاتف"), rows)
     }
 
-    private fun decodeVCardValue(value: String): String =
-        value.replace("\\n", " ", ignoreCase = true)
+    /** Decodes vCard escaped text and RFC 2045 quoted-printable bytes used by many Android exports. */
+    private fun decodeVCardValue(value: String): String {
+        val unescaped = value.replace("\\n", " ", ignoreCase = true)
             .replace("\\,", ",")
             .replace("\\;", ";")
             .replace("\\\\", "\\")
             .trim()
+        if (!Regex("=[0-9A-Fa-f]{2}").containsMatchIn(unescaped)) return unescaped
+
+        val bytes = ByteArrayOutputStream()
+        var index = 0
+        while (index < unescaped.length) {
+            if (unescaped[index] == '=' && index + 2 < unescaped.length) {
+                val hex = unescaped.substring(index + 1, index + 3)
+                val decoded = hex.toIntOrNull(16)
+                if (decoded != null) {
+                    bytes.write(decoded)
+                    index += 3
+                    continue
+                }
+            }
+            val codePoint = unescaped.codePointAt(index)
+            bytes.write(String(Character.toChars(codePoint)).toByteArray(StandardCharsets.UTF_8))
+            index += Character.charCount(codePoint)
+        }
+        return bytes.toByteArray().toString(StandardCharsets.UTF_8).trim()
+    }
 }
