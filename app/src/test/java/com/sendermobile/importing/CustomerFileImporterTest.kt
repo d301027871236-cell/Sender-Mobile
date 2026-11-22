@@ -49,6 +49,25 @@ class CustomerFileImporterTest {
 
 
     @Test
+    fun vcfDecodesQuotedPrintableArabicNames() {
+        val vcf = """
+            BEGIN:VCARD
+            VERSION:2.1
+            FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=D8=A3=D8=AD=D9=85=D8=AF
+            TEL;CELL:01027616172
+            END:VCARD
+        """.trimIndent()
+
+        val preview = CustomerFileImporter.parse(
+            ByteArrayInputStream(vcf.toByteArray(StandardCharsets.UTF_8)),
+            "contacts.vcf"
+        )
+
+        assertEquals("أحمد", preview.rows.single()[0])
+        assertEquals("01027616172", preview.rows.single()[1])
+    }
+
+    @Test
     fun xlsxReadsSharedStringsAndSparseColumns() {
         val output = ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
