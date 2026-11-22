@@ -72,7 +72,7 @@ class CustomerFileImporterTest {
         val vcf = """
             BEGIN:VCARD
             VERSION:2.1
-            FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:D8=AD=D9=85=D8=AF
+            FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:D8=A3=D8=AD=D9=85=D8=AF
             TEL;CELL:01027616172
             END:VCARD
         """.trimIndent()
