@@ -71,9 +71,13 @@ internal fun matchesPhonePrefix(
     val originalDigits = phoneSearchDigits(originalPhone)
     val normalizedDigits = phoneSearchDigits(normalizedPhone)
     val callingCode = phoneSearchDigits(countryCode)
+    val nationalDigits = normalizedDigits.removePrefix(callingCode)
+    val nationalQuery = if (callingCode == "20" && queryDigits.startsWith("0")) {
+        queryDigits.drop(1)
+    } else queryDigits
     return originalDigits.startsWith(queryDigits) ||
         normalizedDigits.startsWith(queryDigits) ||
-        normalizedDigits.removePrefix(callingCode).startsWith(queryDigits)
+        nationalDigits.startsWith(nationalQuery)
 }
 
 class MainActivity : ComponentActivity() {
