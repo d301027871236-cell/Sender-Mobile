@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.sendermobile.data.Customer
+import com.sendermobile.data.CountryNames
 import com.sendermobile.data.CustomerDatabase
 import com.sendermobile.importing.CustomerFileImporter
 import com.sendermobile.importing.CustomerImportMapper
@@ -188,12 +189,18 @@ private fun SenderMobileApp(
     val isPhoneQuery = query.isNotBlank() && query.all {
         Character.digit(it, 10) >= 0 || it.isWhitespace() || it in "+-()."
     } && queryDigits.isNotEmpty()
+    // Build filters from every country actually present in the customer database.
+    // This avoids limiting the UI to a hard-coded list of three nationalities.
+    val availableCountries = customers
+        .map { CountryNames.displayStoredName(it.countryName) }
+        .distinct()
+        .sorted()
     val filteredCustomers = customers.filter { customer ->
+        val customerCountry = CountryNames.displayStoredName(customer.countryName)
         val matchesCountry = when (countryFilter) {
             "الكل" -> true
-            "مصر" -> customer.isEgyptian
             "غير مصر" -> !customer.isEgyptian
-            else -> customer.countryName == countryFilter
+            else -> customerCountry == countryFilter
         }
         val matchesName = query.isBlank() || customer.name.contains(query, ignoreCase = true)
         val matchesPhone = isPhoneQuery && matchesPhonePrefix(
@@ -306,7 +313,7 @@ private fun SenderMobileApp(
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("الكل", "مصر", "غير مصر", "الكويت", "السعودية").forEach { country ->
+                        (listOf("الكل", "غير مصر") + availableCountries).distinct().forEach { country ->
                             FilterChip(
                                 selected = countryFilter == country,
                                 onClick = {
@@ -318,7 +325,7 @@ private fun SenderMobileApp(
                         }
                     }
                     Text(
-                        "المعروض: ${filteredCustomers.size} من ${customers.size} | الكويت: ${customers.count { it.countryName == "الكويت" }} | السعودية: ${customers.count { it.countryName == "السعودية" }}",
+                        "المعروض: ${filteredCustomers.size} من ${customers.size} | الجنسيات: ${availableCountries.size}",
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (filteredCustomers.isEmpty()) {
@@ -366,7 +373,7 @@ private fun CustomerCard(customer: Customer) {
                 Text(customer.name, fontWeight = FontWeight.SemiBold)
                 Text(customer.normalizedPhone, style = MaterialTheme.typography.bodySmall)
             }
-            Text(customer.countryName, style = MaterialTheme.typography.labelMedium)
+            Text(CountryNames.displayStoredName(customer.countryName), style = MaterialTheme.typography.labelMedium)
         }
     }
 }
