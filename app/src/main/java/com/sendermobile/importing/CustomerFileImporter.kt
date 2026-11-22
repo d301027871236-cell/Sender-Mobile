@@ -102,7 +102,9 @@ object CustomerFileImporter {
             var entry = zip.nextEntry
             while (entry != null) {
                 if (!entry.isDirectory && (entry.name == "xl/sharedStrings.xml" ||
-                        entry.name == "xl/worksheets/sheet1.xml")) {
+                        entry.name == "xl/workbook.xml" ||
+                        entry.name == "xl/_rels/workbook.xml.rels" ||
+                        entry.name.startsWith("xl/worksheets/"))) {
                     val output = ByteArrayOutputStream()
                     zip.copyTo(output)
                     entries[entry.name] = output.toByteArray()
@@ -111,8 +113,12 @@ object CustomerFileImporter {
                 entry = zip.nextEntry
             }
         }
-        val sheetBytes = entries["xl/worksheets/sheet1.xml"]
-            ?: throw IllegalArgumentException("ملف XLSX لا يحتوي على ورقة عمل أولى قابلة للقراءة")
+        val firstSheetPath = readFirstWorksheetPath(
+            entries["xl/workbook.xml"],
+            entries["xl/_rels/workbook.xml.rels"]
+        ) ?: "xl/worksheets/sheet1.xml"
+        val sheetBytes = entries[firstSheetPath]
+            ?: throw IllegalArgumentException("ملف XLSX لا يحتوي على ورقة العمل الأولى قابلة للقراءة")
         val sharedStrings = entries["xl/sharedStrings.xml"]?.let(::readSharedStrings).orEmpty()
         val sheetRows = readWorksheet(sheetBytes, sharedStrings)
             .filter { row -> row.any(String::isNotBlank) }
@@ -120,6 +126,36 @@ object CustomerFileImporter {
         val width = sheetRows.maxOf { it.size }
         val rectangular = sheetRows.map { it + List(width - it.size) { "" } }
         return ImportPreview(rectangular.first(), rectangular.drop(1))
+    }
+
+
+    private fun readFirstWorksheetPath(workbookXml: ByteArray?, relationshipsXml: ByteArray?): String? {
+        if (workbookXml == null || relationshipsXml == null) return null
+        var firstRelationshipId: String? = null
+        val workbookHandler = object : DefaultHandler() {
+            override fun startElement(uri: String?, localName: String?, qName: String, attrs: Attributes) {
+                if (qName.substringAfter(':') == "sheet" && firstRelationshipId == null) {
+                    firstRelationshipId = attrs.getValue("r:id") ?: attrs.getValue("id")
+                }
+            }
+        }
+        saxFactory().newSAXParser().parse(ByteArrayInputStream(workbookXml), workbookHandler)
+        val wantedId = firstRelationshipId ?: return null
+        var target: String? = null
+        val relationshipsHandler = object : DefaultHandler() {
+            override fun startElement(uri: String?, localName: String?, qName: String, attrs: Attributes) {
+                if (qName.substringAfter(':') == "Relationship" && attrs.getValue("Id") == wantedId) {
+                    target = attrs.getValue("Target")
+                }
+            }
+        }
+        saxFactory().newSAXParser().parse(ByteArrayInputStream(relationshipsXml), relationshipsHandler)
+        val resolved = target ?: return null
+        return when {
+            resolved.startsWith("/") -> resolved.removePrefix("/")
+            resolved.startsWith("xl/") -> resolved
+            else -> "xl/$resolved"
+        }
     }
 
     private fun readSharedStrings(bytes: ByteArray): List<String> {
