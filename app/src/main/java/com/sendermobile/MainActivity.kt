@@ -53,6 +53,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
+private fun phoneSearchDigits(value: String): String = buildString {
+    value.forEach { character ->
+        val digit = Character.digit(character, 10)
+        if (digit >= 0) append(('0'.code + digit).toChar())
+    }
+}
+
 class MainActivity : ComponentActivity() {
     private val customerDao by lazy { CustomerDatabase.getInstance(applicationContext).customerDao() }
 
@@ -133,14 +141,27 @@ private fun SenderMobileApp(
     var busy by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var countryFilter by remember { mutableStateOf("الكل") }
+    val query = searchQuery.trim()
+    val queryDigits = phoneSearchDigits(query)
+    val isPhoneQuery = query.isNotBlank() && query.all {
+        Character.digit(it, 10) >= 0 || it.isWhitespace() || it in "+-()."
+    } && queryDigits.isNotEmpty()
     val filteredCustomers = customers.filter { customer ->
-        val matchesCountry = countryFilter == "الكل" ||
-            (countryFilter == "غير مصر" && !customer.isEgyptian) || customer.countryName == countryFilter
-        val query = searchQuery.trim()
-        val matchesSearch = query.isBlank() || customer.name.contains(query, ignoreCase = true) ||
-            customer.originalPhone.contains(query, ignoreCase = true) ||
-            customer.normalizedPhone.contains(query, ignoreCase = true)
-        matchesCountry && matchesSearch
+        val matchesCountry = when (countryFilter) {
+            "الكل" -> true
+            "مصر" -> customer.isEgyptian
+            "غير مصر" -> !customer.isEgyptian
+            else -> customer.countryName == countryFilter
+        }
+        val matchesName = query.isBlank() || customer.name.contains(query, ignoreCase = true)
+        val originalDigits = phoneSearchDigits(customer.originalPhone)
+        val normalizedDigits = phoneSearchDigits(customer.normalizedPhone)
+        val matchesPhone = isPhoneQuery && (
+            originalDigits.startsWith(queryDigits) ||
+                normalizedDigits.startsWith(queryDigits) ||
+                normalizedDigits.removePrefix(customer.countryCode.filter(Char::isDigit)).startsWith(queryDigits)
+            )
+        matchesCountry && (query.isBlank() || matchesName || matchesPhone)
     }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -262,8 +283,16 @@ private fun SenderMobileApp(
                         "المعروض: ${filteredCustomers.size} من ${customers.size} | الكويت: ${customers.count { it.countryName == "الكويت" }} | السعودية: ${customers.count { it.countryName == "السعودية" }}",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        itemsIndexed(filteredCustomers) { _, customer -> CustomerCard(customer) }
+                    if (filteredCustomers.isEmpty()) {
+                        Text(
+                            if (searchQuery.isBlank()) "لا يوجد عملاء في هذا التصنيف."
+                            else "لا توجد نتائج مطابقة للبحث.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            itemsIndexed(filteredCustomers) { _, customer -> CustomerCard(customer) }
+                        }
                     }
                 }
             }
