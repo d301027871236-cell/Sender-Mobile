@@ -131,7 +131,8 @@ private fun SenderMobileApp(
     var searchQuery by remember { mutableStateOf("") }
     var countryFilter by remember { mutableStateOf("الكل") }
     val filteredCustomers = customers.filter { customer ->
-        val matchesCountry = countryFilter == "الكل" || customer.countryName == countryFilter
+        val matchesCountry = countryFilter == "الكل" ||
+            (countryFilter == "غير مصر" && !customer.isEgyptian) || customer.countryName == countryFilter
         val query = searchQuery.trim()
         val matchesSearch = query.isBlank() || customer.name.contains(query, ignoreCase = true) ||
             customer.originalPhone.contains(query, ignoreCase = true) ||
@@ -236,7 +237,7 @@ private fun SenderMobileApp(
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("الكل", "مصر", "الكويت", "السعودية").forEach { country ->
+                        listOf("الكل", "مصر", "غير مصر", "الكويت", "السعودية").forEach { country ->
                             FilterChip(
                                 selected = countryFilter == country,
                                 onClick = { countryFilter = country },
