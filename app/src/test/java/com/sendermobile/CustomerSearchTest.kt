@@ -17,6 +17,8 @@ class CustomerSearchTest {
         assertTrue(matchesPhonePrefix("01027616172", "+201027616172", "+20", "010"))
         assertTrue(matchesPhonePrefix("01027616172", "+201027616172", "+20", "0102"))
         assertTrue(matchesPhonePrefix("01027616172", "+201027616172", "+20", "01027616172"))
+        assertTrue(matchesPhonePrefix("+201027616172", "+201027616172", "+20", "010"))
+        assertTrue(matchesPhonePrefix("+201027616172", "+201027616172", "+20", "0102"))
     }
 
     @Test
