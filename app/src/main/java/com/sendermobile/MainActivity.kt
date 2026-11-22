@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +24,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -124,6 +128,16 @@ private fun SenderMobileApp(
     var phoneColumn by remember { mutableStateOf(1) }
     var status by remember { mutableStateOf("اختر ملف CSV أو Excel أو VCF لبدء الاستيراد.") }
     var busy by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var countryFilter by remember { mutableStateOf("الكل") }
+    val filteredCustomers = customers.filter { customer ->
+        val matchesCountry = countryFilter == "الكل" || customer.countryName == countryFilter
+        val query = searchQuery.trim()
+        val matchesSearch = query.isBlank() || customer.name.contains(query, ignoreCase = true) ||
+            customer.originalPhone.contains(query, ignoreCase = true) ||
+            customer.normalizedPhone.contains(query, ignoreCase = true)
+        matchesCountry && matchesSearch
+    }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -211,8 +225,31 @@ private fun SenderMobileApp(
                 } ?: run {
                     Spacer(Modifier.height(4.dp))
                     Text("العملاء المحفوظون", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("بحث بالاسم أو رقم الهاتف") }
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("الكل", "مصر", "الكويت", "السعودية").forEach { country ->
+                            FilterChip(
+                                selected = countryFilter == country,
+                                onClick = { countryFilter = country },
+                                label = { Text(country) }
+                            )
+                        }
+                    }
+                    Text(
+                        "المعروض: ${filteredCustomers.size} من ${customers.size} | الكويت: ${customers.count { it.countryName == "الكويت" }} | السعودية: ${customers.count { it.countryName == "السعودية" }}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        itemsIndexed(customers) { _, customer -> CustomerCard(customer) }
+                        itemsIndexed(filteredCustomers) { _, customer -> CustomerCard(customer) }
                     }
                 }
             }
