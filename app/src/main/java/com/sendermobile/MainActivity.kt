@@ -1,6 +1,7 @@
 package com.sendermobile
 
 import android.net.Uri
+import android.content.Intent
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
@@ -230,6 +231,14 @@ private fun SenderMobileApp(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("Sender Mobile", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                var activeTab by remember { mutableStateOf("customers") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    FilterChip(selected = activeTab == "customers", onClick = { activeTab = "customers" }, label = { Text("العملاء") })
+                    FilterChip(selected = activeTab == "campaigns", onClick = { activeTab = "campaigns" }, label = { Text("الحملات والرسائل") })
+                }
+                if (activeTab == "campaigns") {
+                    CampaignCenter(customers = customers)
+                } else {
                 Text("إدارة العملاء", style = MaterialTheme.typography.titleLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Card(modifier = Modifier.weight(1f)) {
@@ -339,6 +348,7 @@ private fun SenderMobileApp(
                             itemsIndexed(filteredCustomers) { _, customer -> CustomerCard(customer) }
                         }
                     }
+                }
                 }
             }
         }
