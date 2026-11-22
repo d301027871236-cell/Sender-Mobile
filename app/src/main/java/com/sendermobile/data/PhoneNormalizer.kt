@@ -2,6 +2,7 @@ package com.sendermobile.data
 
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import java.util.Locale
 
 data class NormalizedPhone(
     val e164: String,
@@ -38,7 +39,7 @@ object PhoneNormalizer {
             NormalizedPhone(
                 e164 = e164,
                 countryCode = "+${parsed.countryCode}",
-                countryName = countryNames[region] ?: region,
+                countryName = countryNames[region] ?: phoneUtil.getRegionDisplayName(region, Locale("ar")),
                 isEgyptian = region == "EG"
             )
         } catch (_: NumberParseException) {
