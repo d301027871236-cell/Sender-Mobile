@@ -2,6 +2,9 @@ package com.sendermobile.importing
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,6 +45,28 @@ class CustomerFileImporterTest {
         assertEquals("أحمد محمد", preview.rows[0][0])
         assertEquals("+201027616172", preview.rows[0][1])
         assertEquals("+201112223333", preview.rows[1][1])
+    }
+
+
+    @Test
+    fun xlsxReadsSharedStringsAndSparseColumns() {
+        val output = ByteArrayOutputStream()
+        ZipOutputStream(output).use { zip ->
+            zip.putNextEntry(ZipEntry("xl/sharedStrings.xml"))
+            zip.write("""<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>الاسم</t></si><si><t>الهاتف</t></si><si><t>أحمد</t></si></sst>""".toByteArray(StandardCharsets.UTF_8))
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("xl/worksheets/sheet1.xml"))
+            zip.write("""<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="inlineStr"><is><t>01027616172</t></is></c></row></sheetData></worksheet>""".toByteArray(StandardCharsets.UTF_8))
+            zip.closeEntry()
+        }
+
+        val preview = CustomerFileImporter.parse(
+            ByteArrayInputStream(output.toByteArray()),
+            "customers.xlsx"
+        )
+
+        assertEquals(listOf("الاسم", "الهاتف"), preview.headers)
+        assertEquals(listOf("أحمد", "01027616172"), preview.rows.single())
     }
 
     @Test
