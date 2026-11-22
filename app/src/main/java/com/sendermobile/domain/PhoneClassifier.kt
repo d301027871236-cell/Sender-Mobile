@@ -29,7 +29,7 @@ class PhoneClassifier {
                 "EG" -> "مصر"
                 "KW" -> "الكويت"
                 "SA" -> "السعودية"
-                else -> phoneUtil.getRegionDisplayName(region, java.util.Locale("ar"))
+                else -> region
             }
             PhoneClassification(
                 normalizedNumber = phoneUtil.format(parsed, PhoneNumberUtil.PhoneNumberFormat.E164),
