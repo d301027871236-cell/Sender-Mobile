@@ -13,15 +13,9 @@ data class NormalizedPhone(
 object PhoneNormalizer {
     private val phoneUtil: PhoneNumberUtil = PhoneNumberUtil.getInstance()
 
-    private val countryNames = mapOf(
-        "EG" to "مصر",
-        "KW" to "الكويت",
-        "SA" to "السعودية"
-    )
-
     /**
      * Local numbers are interpreted as Egyptian by default.
-     * International numbers should include + or an international dialing prefix.
+     * International numbers are classified for every region supported by libphonenumber.
      */
     fun normalize(rawPhone: String): NormalizedPhone? {
         val cleaned = normalizeDigits(rawPhone).trim()
@@ -38,7 +32,7 @@ object PhoneNormalizer {
             NormalizedPhone(
                 e164 = e164,
                 countryCode = "+${parsed.countryCode}",
-                countryName = countryNames[region] ?: region,
+                countryName = CountryNames.displayName(region),
                 isEgyptian = region == "EG"
             )
         } catch (_: NumberParseException) {
