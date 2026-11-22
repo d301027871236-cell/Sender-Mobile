@@ -24,6 +24,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -230,7 +234,14 @@ private fun SenderMobileApp(
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        label = { Text("بحث بالاسم أو رقم الهاتف") }
+                        label = { Text("بحث بالاسم أو رقم الهاتف") },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "مسح البحث")
+                                }
+                            }
+                        }
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -239,7 +250,10 @@ private fun SenderMobileApp(
                         listOf("الكل", "مصر", "غير مصر", "الكويت", "السعودية").forEach { country ->
                             FilterChip(
                                 selected = countryFilter == country,
-                                onClick = { countryFilter = country },
+                                onClick = {
+                                    countryFilter = country
+                                    if (country == "الكل") searchQuery = ""
+                                },
                                 label = { Text(country) }
                             )
                         }
