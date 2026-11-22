@@ -49,4 +49,28 @@ class PhoneNormalizerTest {
     fun invalidNumberIsRejected() {
         assertNull(PhoneNormalizer.normalize("123"))
     }
+    @Test
+    fun otherInternationalCountriesAreRecognizedAndNamed() {
+        val unitedStates = PhoneNormalizer.normalize("+1 202 555 0123")
+        val unitedKingdom = PhoneNormalizer.normalize("+44 20 7031 3000")
+
+        assertEquals("+12025550123", unitedStates?.e164)
+        assertEquals("+1", unitedStates?.countryCode)
+        assertTrue(!unitedStates?.countryName.isNullOrBlank())
+        assertFalse(unitedStates?.countryName == "US")
+        assertFalse(unitedStates?.isEgyptian ?: true)
+
+        assertEquals("+442070313000", unitedKingdom?.e164)
+        assertEquals("+44", unitedKingdom?.countryCode)
+        assertTrue(!unitedKingdom?.countryName.isNullOrBlank())
+        assertFalse(unitedKingdom?.countryName == "GB")
+        assertFalse(unitedKingdom?.isEgyptian ?: true)
+    }
+
+    @Test
+    fun legacyStoredIsoCountryCodesAreShownAsArabicNames() {
+        assertEquals("الولايات المتحدة", CountryNames.displayStoredName("US"))
+        assertEquals("مصر", CountryNames.displayStoredName("مصر"))
+    }
+
 }
