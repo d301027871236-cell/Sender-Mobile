@@ -237,7 +237,7 @@ private fun SenderMobileApp(
                     FilterChip(selected = activeTab == "campaigns", onClick = { activeTab = "campaigns" }, label = { Text("الحملات والرسائل") })
                 }
                 if (activeTab == "campaigns") {
-                    CampaignCenter(customers = customers)
+                    CampaignCenter(customers = customers, modifier = Modifier.weight(1f))
                 } else {
                 Text("إدارة العملاء", style = MaterialTheme.typography.titleLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
