@@ -299,20 +299,24 @@ object CustomerFileImporter {
             .replace("\\;", ";")
             .replace("\\\\", "\\")
             .trim()
-        if (!Regex("=[0-9A-Fa-f]{2}").containsMatchIn(unescaped)) return unescaped
+        // Some phone exports omit the first '=' but keep the remaining quoted-printable octets.
+        val quotedPrintable = if (Regex("^[0-9A-Fa-f]{2}=[0-9A-Fa-f]{2}").containsMatchIn(unescaped)) {
+            "=$unescaped"
+        } else unescaped
+        if (!Regex("=[0-9A-Fa-f]{2}").containsMatchIn(quotedPrintable)) return unescaped
 
         val bytes = ByteArrayOutputStream()
         var index = 0
-        while (index < unescaped.length) {
-            if (unescaped[index] == '=' && index + 2 < unescaped.length) {
-                val decoded = unescaped.substring(index + 1, index + 3).toIntOrNull(16)
+        while (index < quotedPrintable.length) {
+            if (quotedPrintable[index] == '=' && index + 2 < quotedPrintable.length) {
+                val decoded = quotedPrintable.substring(index + 1, index + 3).toIntOrNull(16)
                 if (decoded != null) {
                     bytes.write(decoded)
                     index += 3
                     continue
                 }
             }
-            val codePoint = unescaped.codePointAt(index)
+            val codePoint = quotedPrintable.codePointAt(index)
             bytes.write(String(Character.toChars(codePoint)).toByteArray(charset))
             index += Character.charCount(codePoint)
         }
