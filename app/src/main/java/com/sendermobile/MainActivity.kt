@@ -169,8 +169,6 @@ private fun SenderMobileApp(
             else -> customer.countryName == countryFilter
         }
         val matchesName = query.isBlank() || customer.name.contains(query, ignoreCase = true)
-        val originalDigits = phoneSearchDigits(customer.originalPhone)
-        val normalizedDigits = phoneSearchDigits(customer.normalizedPhone)
         val matchesPhone = isPhoneQuery && matchesPhonePrefix(
             customer.originalPhone, customer.normalizedPhone, customer.countryCode, queryDigits
         )
