@@ -268,20 +268,32 @@ object CustomerFileImporter {
             when {
                 line.equals("BEGIN:VCARD", ignoreCase = true) -> { name = ""; phones.clear() }
                 line.equals("END:VCARD", ignoreCase = true) -> flushCard()
-                property == "FN" -> name = decodeVCardValue(line.substringAfter(':', "").trim())
+                property == "FN" -> name = decodeVCardValue(line.substringAfter(':', "").trim(), vCardCharset(line))
                 property == "N" && name.isBlank() -> {
                     val parts = line.substringAfter(':').split(';')
-                    name = decodeVCardValue(parts.take(2).reversed().filter(String::isNotBlank).joinToString(" ").trim())
+                    name = decodeVCardValue(parts.take(2).reversed().filter(String::isNotBlank).joinToString(" ").trim(), vCardCharset(line))
                 }
-                property == "TEL" && line.contains(':') -> phones += decodeVCardValue(line.substringAfter(':').trim())
+                property == "TEL" && line.contains(':') -> phones += decodeVCardValue(line.substringAfter(':').trim(), vCardCharset(line))
             }
         }
         if (name.isNotBlank() || phones.isNotEmpty()) flushCard()
         return ImportPreview(listOf("الاسم", "رقم الهاتف"), rows)
     }
 
-    /** Decodes vCard escaped text and RFC 2045 quoted-printable bytes used by many Android exports. */
-    private fun decodeVCardValue(value: String): String {
+    private fun vCardCharset(line: String): java.nio.charset.Charset {
+        val header = line.substringBefore(':')
+        val charsetName = Regex("(?i)(?:^|;)CHARSET=([^;:]+)")
+            .find(header)?.groupValues?.getOrNull(1)?.trim()?.trim('"')
+        return try {
+            if (charsetName.isNullOrBlank()) StandardCharsets.UTF_8
+            else java.nio.charset.Charset.forName(charsetName)
+        } catch (_: Exception) {
+            StandardCharsets.UTF_8
+        }
+    }
+
+    /** Decodes vCard escaped text and RFC 2045 quoted-printable bytes used by Android exports. */
+    private fun decodeVCardValue(value: String, charset: java.nio.charset.Charset = StandardCharsets.UTF_8): String {
         val unescaped = value.replace("\\n", " ", ignoreCase = true)
             .replace("\\,", ",")
             .replace("\\;", ";")
@@ -293,8 +305,7 @@ object CustomerFileImporter {
         var index = 0
         while (index < unescaped.length) {
             if (unescaped[index] == '=' && index + 2 < unescaped.length) {
-                val hex = unescaped.substring(index + 1, index + 3)
-                val decoded = hex.toIntOrNull(16)
+                val decoded = unescaped.substring(index + 1, index + 3).toIntOrNull(16)
                 if (decoded != null) {
                     bytes.write(decoded)
                     index += 3
@@ -302,9 +313,9 @@ object CustomerFileImporter {
                 }
             }
             val codePoint = unescaped.codePointAt(index)
-            bytes.write(String(Character.toChars(codePoint)).toByteArray(StandardCharsets.UTF_8))
+            bytes.write(String(Character.toChars(codePoint)).toByteArray(charset))
             index += Character.charCount(codePoint)
         }
-        return bytes.toByteArray().toString(StandardCharsets.UTF_8).trim()
+        return bytes.toByteArray().toString(charset).trim()
     }
 }
