@@ -32,7 +32,7 @@ object CustomerFileImporter {
         if (text.isBlank()) return ImportPreview(emptyList(), emptyList())
 
         val firstLine = text.lineSequence().firstOrNull().orEmpty()
-        val delimiter = listOf(',', ';', '\\t').maxByOrNull { firstLine.count { ch -> ch == it } } ?: ','
+        val delimiter = listOf(',', ';', '\t').maxByOrNull { firstLine.count { ch -> ch == it } } ?: ','
         val records = parseDelimited(text, delimiter)
             .map { row -> row.map(String::trim) }
             .filter { row -> row.any(String::isNotBlank) }
@@ -62,12 +62,12 @@ object CustomerFileImporter {
                     row += cell.toString()
                     cell.setLength(0)
                 }
-                (ch == '\\n' || ch == '\\r') && !quoted -> {
+                (ch == '\n' || ch == '\r') && !quoted -> {
                     row += cell.toString()
                     cell.setLength(0)
                     records += row.toList()
                     row.clear()
-                    if (ch == '\\r' && index + 1 < text.length && text[index + 1] == '\\n') index++
+                    if (ch == '\r' && index + 1 < text.length && text[index + 1] == '\n') index++
                 }
                 else -> cell.append(ch)
             }
@@ -116,7 +116,7 @@ object CustomerFileImporter {
         val lines = BufferedReader(InputStreamReader(input, StandardCharsets.UTF_8)).use { it.readLines() }
         val unfolded = mutableListOf<String>()
         lines.forEach { line ->
-            if ((line.startsWith(" ") || line.startsWith("\\t")) && unfolded.isNotEmpty()) {
+            if ((line.startsWith(" ") || line.startsWith("\t")) && unfolded.isNotEmpty()) {
                 unfolded[unfolded.lastIndex] = unfolded.last() + line.drop(1)
             } else {
                 unfolded += line
@@ -128,26 +128,27 @@ object CustomerFileImporter {
         val phones = mutableListOf<String>()
 
         fun flushCard() {
-            phones.filter(String::isNotBlank).forEach { phone -> rows += listOf(name.ifBlank { phone }, phone) }
+            phones.filter(String::isNotBlank).forEach { phone ->
+                rows += listOf(name.ifBlank { phone }, phone)
+            }
             name = ""
             phones.clear()
         }
 
         unfolded.forEach { line ->
+            val property = line.substringBefore(':').substringBefore(';').uppercase(Locale.ROOT)
             when {
                 line.equals("BEGIN:VCARD", ignoreCase = true) -> {
                     name = ""
                     phones.clear()
                 }
                 line.equals("END:VCARD", ignoreCase = true) -> flushCard()
-                line.startsWith("FN", ignoreCase = true) && line.substringBefore(':').contains("FN", true) -> {
-                    name = decodeVCardValue(line.substringAfter(':', "").trim())
+                property == "FN" -> name = decodeVCardValue(line.substringAfter(':', "").trim())
+                property == "N" && name.isBlank() -> {
+                    val parts = line.substringAfter(':').split(';')
+                    name = decodeVCardValue(parts.take(2).reversed().filter(String::isNotBlank).joinToString(" ").trim())
                 }
-                line.startsWith("N:", ignoreCase = true) && name.isBlank() -> {
-                    val parts = line.substringAfter(':').split(';').asReversed()
-                    name = decodeVCardValue(parts.filter(String::isNotBlank).joinToString(" ").trim())
-                }
-                line.startsWith("TEL", ignoreCase = true) && line.contains(':') -> {
+                property == "TEL" && line.contains(':') -> {
                     phones += decodeVCardValue(line.substringAfter(':').trim())
                 }
             }
