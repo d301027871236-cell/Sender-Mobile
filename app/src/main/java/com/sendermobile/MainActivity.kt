@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
                     else customerDao.insertAll(mapped.customers)
                 }
                 val inserted = insertResults.count { it != -1L }
-                val duplicates = mapped.customers.size - inserted
+                val duplicates = mapped.duplicateRows + (mapped.customers.size - inserted)
                 onResult("تمت إضافة $inserted عميل. المكرر: $duplicates، والأرقام غير الصالحة: ${mapped.invalidRows}.")
             } catch (error: Exception) {
                 onResult("تعذر حفظ العملاء: ${error.localizedMessage ?: "خطأ غير معروف"}")
